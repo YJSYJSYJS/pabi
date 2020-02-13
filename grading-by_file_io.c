@@ -1,12 +1,10 @@
-// fscanf와 fprintf가 파일포인터를 공유하기 때문에 파일포인터가 옮겨질때 같이 사용해줘야함
-//따라서 전체적인 구조를 수정해야한다.
+// fscanf와 fprintf가 파일포인터를 공유하기 때문에 파일포인터를 조정해줘야함
 #include<stdio.h>
-#include<string.h>
 //Input: 학번 과제1(10%) 중간고사(30%) 과제2(20%) 기말고사(40%)
 //Output: 학번 평균 학점
 
 int num = 5;
-
+int g;
 //making input.txt file Function
 void make_input(FILE* input);
 //grading Function
@@ -26,31 +24,37 @@ int main(){
         return 101;
     }
 
-    make_input(If);
-    cal_make_output(If, Of);
+    for(int i=0; i<num; i++){
+        g = ftell(If);
+        make_input(If);
+        g = g - ftell(If);
+        fseek(If, g, SEEK_END);
+        cal_make_output(If, Of);
+        fseek(If, -g, SEEK_END);
+    }
 
     fclose(If);
     fclose(Of);
+    
     return 0;
 }
 
 void make_input(FILE* input){
     int ID, hw1, mid, hw2, fin;
     float avr;
-    for(int i=0; i<num; i++){
-        printf("ID: ");
-        scanf("%d", &ID);
-        printf("First Homework: ");
-        scanf("%d", &hw1);
-        printf("Midterm Exam: ");
-        scanf("%d", &mid);
-        printf("Second Homeword: ");
-        scanf("%d", &hw2);
-        printf("Finalterm Exam: ");
-        scanf("%d", &fin);
-        fprintf(input, "%d %d %d %d %d", ID, hw1, mid, hw2, fin);
-        fprintf(input, "\n");
-    }
+    printf("ID: ");
+    scanf("%d", &ID);
+    printf("First Homework: ");
+    scanf("%d", &hw1);
+    printf("Midterm Exam: ");
+    scanf("%d", &mid);
+    printf("Second Homeword: ");
+    scanf("%d", &hw2);
+    printf("Finalterm Exam: ");
+    scanf("%d", &fin);
+    fprintf(input, "%d %d %d %d %d", ID, hw1, mid, hw2, fin);
+    fprintf(input, "\n");
+    //여러번의 fprintf로 인해 파일포인터가 뒤로 이동 - > fscanf 사용 시 파일포인터를 되돌려줘야할 필요
     fflush(input);
 }
 
@@ -93,17 +97,17 @@ char* grading(int avr){
     }
 }
 
-//getdelim으로 수정(한줄씩 띄어쓰기로 구분하여 하나씩 받아오기 가능)
 void cal_make_output(FILE* input, FILE* output){
-    for(int i=0;i<num;i++){
         int id, hw1, mid, hw2, fin;
         float avr;
         char* grade;
         //fscanf 사용시 file pointer 자동으로 증가!!!
+        //make_input에서 사용한 fprintf로 인해 파일포인터를 앞으로 되돌려줘야함 -> rewind 함수 사용 - main
+        //rewind함수로 인해 input파일의 파일포인터가 입력될때마다 초기화되는 문제발생 -> fseek함수로 대체
+        //fseek(input, )
         fscanf(input, "%d %d %d %d %d", &id, &hw1, &mid, &hw2, &fin);
         printf("%d %d %d %d %d\n", id, hw1, mid, hw2, fin);
         avr = 0.1 * (float)hw1 + 0.3 * (float)mid + 0.2 * (float)hw2 + 0.4 * (float)fin;
         grade = grading(avr);
         fprintf(output, "%d %f %s\n", id, avr, grade);
-    }    
 }
